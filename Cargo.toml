@@ -2,13 +2,15 @@
 name = "imhumane-rs"
 version = "0.1.0"
 edition = "2021"
+license = "Apache-2.0"
 
 [dependencies]
-axum = { version = "0.6.6", default-features = false, features = ["tokio", "tower-log", "http1", "json", "matched-path"] }
-base64 = "0.21.0"
+axum = { version = "0.6.6", default-features = false, features = ["tokio", "tower-log", "http1", "json", "matched-path", "macros"] }
 clap = "4.1.6"
-image = { version = "0.24.5", default-features = false, features = ["jpeg", "gif", "jpeg_rayon", "png", "webp", "scoped_threadpool"] }
+deadqueue = { version = "0.2.4", default-features = false, features = ["resizable"] }
+image = { version = "0.24.5", default-features = false, features = ["jpeg", "gif", "jpeg_rayon", "png", "webp"] }
 rand = { version = "0.8.5", default-features = false, features = ["std", "std_rng", "getrandom"] }
+serde = { version = "1.0.152", features = ["derive"] }
 snafu = { version = "0.7.4", features = ["rust_1_61"] }
 tokio = { version = "1.25.0", features = ["macros", "rt-multi-thread"] }
 tower = "0.4.13"
