@@ -1,0 +1,60 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"nixEnvSelector.nixFile": "${workspaceRoot}/shell.nix"
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"type": "lldb",
+				"request": "launch",
+				"name": "Debug executable 'imhumane-rs'",
+				"cargo": {
+					"args": [
+						"build",
+						"--bin=imhumane-rs",
+						"--package=imhumane-rs"
+					],
+					"filter": {
+						"name": "imhumane-rs",
+						"kind": "bin"
+					}
+				},
+				"args": [],
+				"cwd": "${workspaceFolder}"
+			},
+			{
+				"type": "lldb",
+				"request": "launch",
+				"name": "Debug unit tests in executable 'imhumane-rs'",
+				"cargo": {
+					"args": [
+						"test",
+						"--no-run",
+						"--bin=imhumane-rs",
+						"--package=imhumane-rs"
+					],
+					"filter": {
+						"name": "imhumane-rs",
+						"kind": "bin"
+					}
+				},
+				"args": [],
+				"cwd": "${workspaceFolder}"
+			}
+		],
+		"compounds": []
+	},
+	"extensions": {
+		"recommendations": [
+			"vadimcn.vscode-lldb",
+			"rust-lang.rust-analyzer",
+			"arrterian.nix-env-selector"
+		]
+	}
+}
