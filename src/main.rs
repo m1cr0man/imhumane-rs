@@ -2,14 +2,14 @@
 pub mod imhumane;
 pub mod http;
 
-use std::{net::{Ipv4Addr, SocketAddr}, path:: Path, thread};
+use std::{net::{Ipv4Addr, SocketAddr}, path:: Path, thread, sync::Arc};
 
 use axum::Router;
 use tokio::runtime::Handle;
 
 use crate::imhumane::ImHumane;
 
-fn app(service: ImHumane) -> Router {
+fn app(service: Arc<ImHumane>) -> Router {
     crate::http::get_router(service)
 }
 
@@ -18,7 +18,7 @@ async fn main() {
     let addr = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 3000));
     tracing::info!("Listening on {}", addr);
 
-    let service = ImHumane::new(8);
+    let service = Arc::new(ImHumane::new(8));
     service.scan_for_collections(Path::new("images")).unwrap();
 
     // Start threads for the challenge generators

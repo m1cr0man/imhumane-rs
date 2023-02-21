@@ -1,4 +1,4 @@
-use std::{sync::{Arc, RwLock, Mutex}, path::{PathBuf, Path}, io::Cursor, time::{Duration, Instant}, collections::HashMap};
+use std::{sync::{RwLock, Mutex}, path::{PathBuf, Path}, io::Cursor, time::{Duration, Instant}, collections::HashMap};
 use snafu::prelude::*;
 use rand::prelude::*;
 use uuid::Uuid;
@@ -11,19 +11,19 @@ type Result<T, E = Error> = std::result::Result<T, E>;
 const GAP_PX: u32 = 8;
 const IMG_SIZE_PX: u32 = 96;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ImHumane {
-    queue: Arc<deadqueue::resizable::Queue<Challenge>>,
-    collections: Arc<RwLock<Vec<Collection>>>,
-    answers: Arc<Mutex<HashMap<String, u32>>>,
+    queue: deadqueue::resizable::Queue<Challenge>,
+    collections: RwLock<Vec<Collection>>,
+    answers: Mutex<HashMap<String, u32>>,
 }
 
 impl ImHumane {
     pub fn new(buffer_size: usize) -> Self {
         Self {
-            queue: Arc::new(deadqueue::resizable::Queue::new(buffer_size)),
-            collections: Arc::new(RwLock::new(Vec::new())),
-            answers: Arc::new(Mutex::new(HashMap::new())),
+            queue: deadqueue::resizable::Queue::new(buffer_size),
+            collections: RwLock::new(Vec::new()),
+            answers: Mutex::new(HashMap::new()),
         }
     }
 

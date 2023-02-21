@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::{Router, extract::Json, Extension, routing::get, http::{StatusCode, header}, response::IntoResponse};
 use snafu::prelude::*;
 use crate::imhumane::ImHumane;
@@ -10,7 +12,7 @@ pub struct PostPayload {
 }
 
 #[axum::debug_handler]
-pub async fn challenge_post(Extension(imhumane): Extension<ImHumane>, Json(payload): Json<PostPayload>) -> Result<impl IntoResponse, Error> {
+pub async fn challenge_post(Extension(imhumane): Extension<Arc<ImHumane>>, Json(payload): Json<PostPayload>) -> Result<impl IntoResponse, Error> {
     let challenge_id = uuid::Uuid::try_parse(&payload.challenge_id).context(ParseUuidSnafu)?;
 
     let answer = payload.answer;
@@ -21,7 +23,7 @@ pub async fn challenge_post(Extension(imhumane): Extension<ImHumane>, Json(paylo
     }
 }
 
-pub async fn challenge_get(imhumane: Extension<ImHumane>) -> impl IntoResponse {
+pub async fn challenge_get(imhumane: Extension<Arc<ImHumane>>) -> impl IntoResponse {
     let challenge = imhumane.get_challenge().await;
     (
         StatusCode::OK,
@@ -34,7 +36,7 @@ pub async fn challenge_get(imhumane: Extension<ImHumane>) -> impl IntoResponse {
     )
 }
 
-pub fn get_router(service: ImHumane) -> Router {
+pub fn get_router(service: Arc<ImHumane>) -> Router {
     Router::new()
         .route("/",
             get(challenge_get).post(challenge_post)
