@@ -21,6 +21,8 @@ pub enum Error {
     GenerateImage { source: ImageError },
     #[snafu(display("Failed to open image {path}"))]
     OpenImage { path: String, source: ImageError },
+    #[snafu(display("Failed to open thumbnail at {}: {:#}", path.display(), source))]
+    OpenThumbnail { path: PathBuf, source: std::io::Error },
 }
 
 impl From<&Path> for ScanSnafu<String> {

@@ -1,27 +1,38 @@
-use std::{sync::{RwLock, Mutex}, path::{PathBuf, Path}, io::Cursor, time::{Duration, Instant}, collections::HashMap};
+use std::{sync::{RwLock, Mutex}, path::{PathBuf, Path}, io::{Cursor, BufReader, Seek}, time::{Duration, Instant}, collections::HashMap, ffi::OsString};
 use snafu::prelude::*;
 use rand::prelude::*;
 use uuid::Uuid;
-use image::{GenericImage, ImageFormat, imageops::{FilterType, self}, RgbImage, Rgb};
+use image::{GenericImage, ImageFormat, imageops::{FilterType, self}, RgbImage, Rgb, DynamicImage};
 
-use super::{challenge::Challenge, collection::Collection, error::*};
+use super::{challenge::Challenge, collection::Collection, error::*, locked_file::LockedFile};
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
 const GAP_PX: u32 = 8;
 const IMG_SIZE_PX: u32 = 96;
+const THUMBNAIL_PREFIX: &str = &".thumbnail.";
 
 #[derive(Debug)]
 pub struct ImHumane {
     queue: deadqueue::resizable::Queue<Challenge>,
+    thumbnail_queue: deadqueue::unlimited::Queue<PathBuf>,
     collections: RwLock<Vec<Collection>>,
     answers: Mutex<HashMap<String, u32>>,
+}
+
+fn get_thumbnail_path(img_path: &PathBuf) -> PathBuf {
+    // Fancy filename gen to avoid an unnecessary conversion to str
+    let mut thumbnail = OsString::from(THUMBNAIL_PREFIX);
+    thumbnail.push(img_path.file_stem().unwrap());
+    thumbnail.push(".jpg");
+    img_path.with_file_name(thumbnail)
 }
 
 impl ImHumane {
     pub fn new(buffer_size: usize) -> Self {
         Self {
             queue: deadqueue::resizable::Queue::new(buffer_size),
+            thumbnail_queue: deadqueue::unlimited::Queue::new(),
             collections: RwLock::new(Vec::new()),
             answers: Mutex::new(HashMap::new()),
         }
@@ -56,6 +67,20 @@ impl ImHumane {
                 Ok(challenge) => {
                     self.answers.lock().unwrap().insert(challenge.id.clone(), challenge.answer.clone());
                     println!("Generated in {}ms. {}", start.elapsed().as_millis(), challenge);
+
+                    // If queue would block, take a moment to generate a thumbnail
+                    while self.queue.is_full() {
+                        if let Some(img_path) = self.thumbnail_queue.try_pop() {
+                            println!("Taking a moment to generate a thumbnail ({})", img_path.display());
+                            match self.get_thumbnail(&img_path) {
+                                Err(err) => println!("Failed to generate thumbnail for {}: {:?}", img_path.display(), err),
+                                _ => {},
+                            }
+                        } else {
+                            break
+                        }
+                    }
+
                     handle.block_on(self.queue.push(challenge));
                 },
                 Err(err) => {
@@ -64,6 +89,36 @@ impl ImHumane {
                 },
             }
         }
+    }
+
+    fn get_thumbnail(&self, img_path: &PathBuf) -> Result<DynamicImage> {
+        // Need to make sure that only one thread is generating the content of this thumbnail at a time.
+        let thumb_err = OpenThumbnailSnafu { path: img_path.as_path() };
+        let thumb_path = get_thumbnail_path(img_path);
+        let locked_file = LockedFile::open_rw_no_truncate(thumb_path.clone()).context(thumb_err)?;
+        let mut file = &locked_file.file;
+
+        // Check if the written data is a valid thumbnail
+        if file.metadata().context(thumb_err)?.len() > 0 {
+            let reader = BufReader::new(file);
+            let fmt = ImageFormat::Jpeg;
+            let img = image::load(reader, fmt).context(OpenImageSnafu::from(img_path))?;
+            if img.width() == IMG_SIZE_PX && img.height() == IMG_SIZE_PX {
+                println!("Reusing saved thumbnail for {}", thumb_path.display());
+                return Ok(img)
+            }
+        }
+
+        // Otherwise create a new one
+        println!("Generating thumbnail for {}", img_path.display());
+        file.seek(std::io::SeekFrom::Start(0)).context(thumb_err)?;
+        file.set_len(0).context(thumb_err)?;
+
+        let orig_img = image::open(img_path.clone()).context(OpenImageSnafu::from(img_path))?;
+        let orig_img = orig_img.resize(IMG_SIZE_PX, IMG_SIZE_PX, FilterType::Triangle);
+        orig_img.save_with_format(thumb_path, ImageFormat::Jpeg).context(GenerateImageSnafu {})?;
+
+        Ok(orig_img)
     }
 
     fn generate_image(&self, images: Vec<&(&PathBuf, u32)>) -> Result<Vec<u8>> {
@@ -77,8 +132,7 @@ impl ImHumane {
         let mut i = 0;
         for img in images {
             println!("Inserting {}", img.0.display());
-            let test_img = image::open(img.0).context(OpenImageSnafu::from(img.0))?;
-            let test_img = test_img.resize(IMG_SIZE_PX, IMG_SIZE_PX, FilterType::Triangle);
+            let test_img = self.get_thumbnail(&img.0)?;
             imgbuf.copy_from(test_img.as_rgb8().unwrap(), GAP_PX + (img_area * (i % grid_xy)), GAP_PX + (img_area * (i / grid_xy))).context(GenerateImageSnafu {})?;
             i += 1;
         }
@@ -155,7 +209,15 @@ impl ImHumane {
                     let image = image.context(ScanSnafu::from(path.as_path()))?;
                     let img_path = image.path();
 
-                    if img_path.is_file() {
+                    if img_path.is_file() && !img_path.file_name().unwrap().to_string_lossy().starts_with(THUMBNAIL_PREFIX) {
+
+                        // Check if this image needs a thumbnail generated
+                        let thumbnail = get_thumbnail_path(&img_path);
+                        if !thumbnail.exists() {
+                            println!("{} added to thumbnail queue", img_path.display());
+                            self.thumbnail_queue.push(img_path.clone());
+                        }
+
                         println!("{}", img_path.display());
                         images.push(img_path);
                     }

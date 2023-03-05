@@ -16,6 +16,8 @@
 				"name": "Debug executable 'imhumane-rs'",
 				"cargo": {
 					"args": [
+						"-C",
+						"${workspaceFolder}",
 						"build",
 						"--bin=imhumane-rs",
 						"--package=imhumane-rs"
@@ -25,7 +27,6 @@
 						"kind": "bin"
 					}
 				},
-				"args": [],
 				"cwd": "${workspaceFolder}"
 			},
 			{
@@ -44,8 +45,7 @@
 						"kind": "bin"
 					}
 				},
-				"args": [],
-				"cwd": "${workspaceFolder}"
+				"cwd": "${workspaceFolder}/src"
 			}
 		],
 		"compounds": []
