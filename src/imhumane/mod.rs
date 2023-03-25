@@ -1,7 +1,7 @@
-pub mod service;
 pub mod challenge;
-pub mod error;
 pub mod collection;
+pub mod error;
 mod locked_file;
+pub mod service;
 
 pub use service::ImHumane;

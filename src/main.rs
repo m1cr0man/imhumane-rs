@@ -1,8 +1,13 @@
 #![feature(type_alias_impl_trait)]
-pub mod imhumane;
 pub mod http;
+pub mod imhumane;
 
-use std::{net::{Ipv4Addr, SocketAddr}, path:: Path, thread, sync::Arc};
+use std::{
+    net::{Ipv4Addr, SocketAddr},
+    path::Path,
+    sync::Arc,
+    thread,
+};
 
 use axum::Router;
 use tokio::runtime::Handle;

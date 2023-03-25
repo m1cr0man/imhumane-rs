@@ -10,6 +10,10 @@ pub struct Challenge {
 
 impl Display for Challenge {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        write!(f, "ID: {}, topic: {}, answer: {}", self.id, self.topic, self.answer)
+        write!(
+            f,
+            "ID: {}, topic: {}, answer: {}",
+            self.id, self.topic, self.answer
+        )
     }
 }

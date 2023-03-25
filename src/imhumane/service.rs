@@ -1,8 +1,18 @@
-use std::{sync::{RwLock, Mutex}, path::{PathBuf, Path}, io::{Cursor, BufReader, Seek}, time::{Duration, Instant}, collections::{HashMap, HashSet}, ffi::OsString};
-use snafu::prelude::*;
+use image::{
+    imageops::{self, FilterType},
+    DynamicImage, GenericImage, ImageFormat, Rgb, RgbImage,
+};
 use rand::prelude::*;
+use snafu::prelude::*;
+use std::{
+    collections::{HashMap, HashSet},
+    ffi::OsString,
+    io::{BufReader, Cursor, Seek},
+    path::{Path, PathBuf},
+    sync::{Mutex, RwLock},
+    time::{Duration, Instant},
+};
 use uuid::Uuid;
-use image::{GenericImage, ImageFormat, imageops::{FilterType, self}, RgbImage, Rgb, DynamicImage};
 
 use super::{challenge::Challenge, collection::Collection, error::*, locked_file::LockedFile};
 
@@ -54,13 +64,16 @@ impl ImHumane {
 
     pub fn check_answer(&self, challenge_id: String, answer: u32) -> bool {
         if let Some(correct_answer) = self.answers.lock().unwrap().remove(&challenge_id) {
-            println!("Recived answer {} for {}. Expected {}", answer, &challenge_id, correct_answer);
+            println!(
+                "Recived answer {} for {}. Expected {}",
+                answer, &challenge_id, correct_answer
+            );
             if correct_answer == answer {
                 self.validated_tokens.lock().unwrap().insert(challenge_id);
-                return true
+                return true;
             }
         }
-        return false
+        return false;
     }
 
     pub fn check_token(&self, challenge_id: String) -> bool {
@@ -74,35 +87,51 @@ impl ImHumane {
             let start = Instant::now();
             match self.generate() {
                 Ok(challenge) => {
-                    self.answers.lock().unwrap().insert(challenge.id.clone(), challenge.answer.clone());
-                    println!("Generated in {}ms. {}", start.elapsed().as_millis(), challenge);
+                    self.answers
+                        .lock()
+                        .unwrap()
+                        .insert(challenge.id.clone(), challenge.answer.clone());
+                    println!(
+                        "Generated in {}ms. {}",
+                        start.elapsed().as_millis(),
+                        challenge
+                    );
 
                     // If queue would block, take a moment to generate a thumbnail
                     while self.queue.is_full() {
                         if let Some(img_path) = self.thumbnail_queue.try_pop() {
-                            println!("Taking a moment to generate a thumbnail ({})", img_path.display());
+                            println!(
+                                "Taking a moment to generate a thumbnail ({})",
+                                img_path.display()
+                            );
                             match self.get_thumbnail(&img_path) {
-                                Err(err) => println!("Failed to generate thumbnail for {}: {:?}", img_path.display(), err),
-                                _ => {},
+                                Err(err) => println!(
+                                    "Failed to generate thumbnail for {}: {:?}",
+                                    img_path.display(),
+                                    err
+                                ),
+                                _ => {}
                             }
                         } else {
-                            break
+                            break;
                         }
                     }
 
                     handle.block_on(self.queue.push(challenge));
-                },
+                }
                 Err(err) => {
                     println!("Failed to generate challenge: {:#}", err);
                     std::thread::sleep(Duration::from_secs(1));
-                },
+                }
             }
         }
     }
 
     fn get_thumbnail(&self, img_path: &PathBuf) -> Result<DynamicImage> {
         // Need to make sure that only one thread is generating the content of this thumbnail at a time.
-        let thumb_err = OpenThumbnailSnafu { path: img_path.as_path() };
+        let thumb_err = OpenThumbnailSnafu {
+            path: img_path.as_path(),
+        };
         let thumb_path = get_thumbnail_path(img_path);
         let locked_file = LockedFile::open_rw_no_truncate(thumb_path.clone()).context(thumb_err)?;
         let mut file = &locked_file.file;
@@ -114,7 +143,7 @@ impl ImHumane {
             let img = image::load(reader, fmt).context(OpenImageSnafu::from(img_path))?;
             if img.width() == IMG_SIZE_PX && img.height() == IMG_SIZE_PX {
                 println!("Reusing saved thumbnail for {}", thumb_path.display());
-                return Ok(img)
+                return Ok(img);
             }
         }
 
@@ -125,7 +154,9 @@ impl ImHumane {
 
         let orig_img = image::open(img_path.clone()).context(OpenImageSnafu::from(img_path))?;
         let orig_img = orig_img.resize(IMG_SIZE_PX, IMG_SIZE_PX, FilterType::Triangle);
-        orig_img.save_with_format(thumb_path, ImageFormat::Jpeg).context(GenerateImageSnafu {})?;
+        orig_img
+            .save_with_format(thumb_path, ImageFormat::Jpeg)
+            .context(GenerateImageSnafu {})?;
 
         Ok(orig_img)
     }
@@ -142,7 +173,13 @@ impl ImHumane {
         for img in images {
             println!("Inserting {}", img.0.display());
             let test_img = self.get_thumbnail(&img.0)?;
-            imgbuf.copy_from(test_img.as_rgb8().unwrap(), GAP_PX + (img_area * (i % grid_xy)), GAP_PX + (img_area * (i / grid_xy))).context(GenerateImageSnafu {})?;
+            imgbuf
+                .copy_from(
+                    test_img.as_rgb8().unwrap(),
+                    GAP_PX + (img_area * (i % grid_xy)),
+                    GAP_PX + (img_area * (i / grid_xy)),
+                )
+                .context(GenerateImageSnafu {})?;
             i += 1;
         }
 
@@ -150,7 +187,9 @@ impl ImHumane {
 
         let mut outbuf = Cursor::new(&mut data);
         println!("Generating image");
-        imgbuf.write_to(&mut outbuf, ImageFormat::Jpeg).context(GenerateImageSnafu {})?;
+        imgbuf
+            .write_to(&mut outbuf, ImageFormat::Jpeg)
+            .context(GenerateImageSnafu {})?;
 
         Ok(data)
     }
@@ -173,14 +212,24 @@ impl ImHumane {
         let correct = sample.next().context(InsufficientCollectionsSnafu {})?;
 
         // Weight correct answers with (num_collections)
-        let mut images: Vec<_> = correct.images.iter().map(|img| (img, num_collections as u32)).collect();
+        let mut images: Vec<_> = correct
+            .images
+            .iter()
+            .map(|img| (img, num_collections as u32))
+            .collect();
 
         // Weight incorrect answers with 1
         for collection in sample {
-            collection.images.iter().for_each(|img| images.push((img, 1)));
+            collection
+                .images
+                .iter()
+                .for_each(|img| images.push((img, 1)));
         }
 
-        let question_images: Vec<_> = images.choose_multiple_weighted(&mut rng, 9, |(_,v)| *v).unwrap().collect();
+        let question_images: Vec<_> = images
+            .choose_multiple_weighted(&mut rng, 9, |(_, v)| *v)
+            .unwrap()
+            .collect();
 
         let mut answer: u32 = 0x0;
         let mut i = 0;
@@ -200,26 +249,30 @@ impl ImHumane {
     }
 
     pub fn scan_for_collections(&self, root: &Path) -> Result<()> {
-        let mut collections= Vec::new();
+        let mut collections = Vec::new();
 
         for entry in root.read_dir().context(ScanSnafu::from(root))? {
             let entry = entry.context(ScanSnafu::from(root))?;
             let path = entry.path();
             println!("{}", path.display());
 
-            let ftype =  entry.file_type().context(ScanSnafu::from(path.as_path()))?;
+            let ftype = entry.file_type().context(ScanSnafu::from(path.as_path()))?;
 
             // New collection
             if ftype.is_dir() {
-
                 // Scan for images
                 let mut images = Vec::new();
                 for image in path.read_dir().context(ScanSnafu::from(path.as_path()))? {
                     let image = image.context(ScanSnafu::from(path.as_path()))?;
                     let img_path = image.path();
 
-                    if img_path.is_file() && !img_path.file_name().unwrap().to_string_lossy().starts_with(THUMBNAIL_PREFIX) {
-
+                    if img_path.is_file()
+                        && !img_path
+                            .file_name()
+                            .unwrap()
+                            .to_string_lossy()
+                            .starts_with(THUMBNAIL_PREFIX)
+                    {
                         // Check if this image needs a thumbnail generated
                         let thumbnail = get_thumbnail_path(&img_path);
                         if !thumbnail.exists() {
@@ -233,7 +286,7 @@ impl ImHumane {
                 }
 
                 if images.len() == 0 {
-                    continue
+                    continue;
                 }
 
                 // into_string is a weird function. Err is an OsString
@@ -241,7 +294,7 @@ impl ImHumane {
                     Ok(name) => name,
                     Err(_) => {
                         return CollectionNameSnafu::from(path.as_path()).fail();
-                    },
+                    }
                 };
 
                 collections.push(Collection {
@@ -258,5 +311,4 @@ impl ImHumane {
 
         Ok(())
     }
-
 }

@@ -1,4 +1,7 @@
-use axum::{response::{IntoResponse, Response}, http::StatusCode};
+use axum::{
+    http::StatusCode,
+    response::{IntoResponse, Response},
+};
 use snafu::prelude::*;
 
 #[derive(Debug, Snafu)]
@@ -12,11 +15,7 @@ impl IntoResponse for Error {
     fn into_response(self) -> Response {
         let message = self.to_string();
         match self {
-            Error::ParseUuid { source: _ } =>
-                (
-                    StatusCode::BAD_REQUEST,
-                    message,
-                ).into_response(),
+            Error::ParseUuid { source: _ } => (StatusCode::BAD_REQUEST, message).into_response(),
         }
     }
 }
