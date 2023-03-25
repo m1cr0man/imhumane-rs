@@ -1,4 +1,4 @@
-use std::{sync::{RwLock, Mutex}, path::{PathBuf, Path}, io::{Cursor, BufReader, Seek}, time::{Duration, Instant}, collections::HashMap, ffi::OsString};
+use std::{sync::{RwLock, Mutex}, path::{PathBuf, Path}, io::{Cursor, BufReader, Seek}, time::{Duration, Instant}, collections::{HashMap, HashSet}, ffi::OsString};
 use snafu::prelude::*;
 use rand::prelude::*;
 use uuid::Uuid;
@@ -18,6 +18,7 @@ pub struct ImHumane {
     thumbnail_queue: deadqueue::unlimited::Queue<PathBuf>,
     collections: RwLock<Vec<Collection>>,
     answers: Mutex<HashMap<String, u32>>,
+    validated_tokens: Mutex<HashSet<String>>,
 }
 
 fn get_thumbnail_path(img_path: &PathBuf) -> PathBuf {
@@ -35,6 +36,7 @@ impl ImHumane {
             thumbnail_queue: deadqueue::unlimited::Queue::new(),
             collections: RwLock::new(Vec::new()),
             answers: Mutex::new(HashMap::new()),
+            validated_tokens: Mutex::new(HashSet::new()),
         }
     }
 
@@ -53,9 +55,16 @@ impl ImHumane {
     pub fn check_answer(&self, challenge_id: String, answer: u32) -> bool {
         if let Some(correct_answer) = self.answers.lock().unwrap().remove(&challenge_id) {
             println!("Recived answer {} for {}. Expected {}", answer, &challenge_id, correct_answer);
-            return correct_answer == answer
+            if correct_answer == answer {
+                self.validated_tokens.lock().unwrap().insert(challenge_id);
+                return true
+            }
         }
         return false
+    }
+
+    pub fn check_token(&self, challenge_id: String) -> bool {
+        self.validated_tokens.lock().unwrap().remove(&challenge_id)
     }
 
     pub fn run_generator(&self, handle: tokio::runtime::Handle) {

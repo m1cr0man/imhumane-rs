@@ -1,9 +1,18 @@
 use std::sync::Arc;
 
-use axum::{Router, extract::Json, Extension, routing::get, http::{StatusCode, header}, response::IntoResponse};
-use snafu::prelude::*;
+use super::{
+    constants::{HEADER_ID, HEADER_TOPIC},
+    error::{Error, ParseUuidSnafu},
+};
 use crate::imhumane::ImHumane;
-use super::{error::{Error, ParseUuidSnafu}, constants::{HEADER_ID, HEADER_TOPIC}};
+use axum::{
+    extract::{Json, Path},
+    http::{header, StatusCode},
+    response::IntoResponse,
+    routing::get,
+    Extension, Router,
+};
+use snafu::prelude::*;
 
 #[derive(serde::Deserialize)]
 pub struct PostPayload {
@@ -11,8 +20,10 @@ pub struct PostPayload {
     answer: u32,
 }
 
-#[axum::debug_handler]
-pub async fn challenge_post(Extension(imhumane): Extension<Arc<ImHumane>>, Json(payload): Json<PostPayload>) -> Result<impl IntoResponse, Error> {
+pub async fn challenge_post(
+    Extension(imhumane): Extension<Arc<ImHumane>>,
+    Json(payload): Json<PostPayload>,
+) -> Result<impl IntoResponse, Error> {
     let challenge_id = uuid::Uuid::try_parse(&payload.challenge_id).context(ParseUuidSnafu)?;
 
     let answer = payload.answer;
@@ -36,10 +47,19 @@ pub async fn challenge_get(imhumane: Extension<Arc<ImHumane>>) -> impl IntoRespo
     )
 }
 
+pub async fn challenge_token_get(
+    imhumane: Extension<Arc<ImHumane>>,
+    Path(challenge_id): Path<uuid::Uuid>,
+) -> impl IntoResponse {
+    match imhumane.check_token(challenge_id.to_string()) {
+        true => StatusCode::NO_CONTENT,
+        false => StatusCode::UNAUTHORIZED,
+    }
+}
+
 pub fn get_router(service: Arc<ImHumane>) -> Router {
     Router::new()
-        .route("/",
-            get(challenge_get).post(challenge_post)
-        )
         .layer(Extension(service))
+        .route("/", get(challenge_get).post(challenge_post))
+        .route("/:challenge_id", get(challenge_token_get))
 }

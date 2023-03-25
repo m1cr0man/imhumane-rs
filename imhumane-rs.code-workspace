@@ -5,7 +5,11 @@
 		}
 	],
 	"settings": {
-		"nixEnvSelector.nixFile": "${workspaceRoot}/shell.nix"
+		"nixEnvSelector.nixFile": "${workspaceRoot}/shell.nix",
+		"editor.formatOnSave": true,
+		"files.insertFinalNewline": true,
+		"files.trimFinalNewlines": true,
+		"files.trimTrailingWhitespace": true
 	},
 	"launch": {
 		"version": "0.2.0",
