@@ -1,18 +1,18 @@
 [package]
-name = "imhumane-rs"
+name = "imhumane"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-axum = "0.6.6"
-clap = "4.1.6"
-deadqueue = { version = "0.2.4", default-features = false, features = ["resizable"] }
-fs2 = "0.4.3"
-image = { version = "0.24.5", default-features = false, features = ["jpeg", "gif", "jpeg_rayon", "png", "webp"] }
-rand = { version = "0.8.5", default-features = false, features = ["std", "std_rng", "getrandom"] }
-serde = { version = "1.0.152", features = ["derive"] }
-snafu = { version = "0.7.4", features = ["rust_1_61"] }
-tokio = { version = "1.25.0", features = ["macros", "rt-multi-thread"] }
-tracing = "0.1.37"
-uuid = { version = "1.3.0", features = ["v4", "serde"] }
+axum = "0.6"
+clap = "4"
+deadqueue = { version = "0.2", default-features = false, features = ["resizable"] }
+fs2 = "0.4"
+image = { version = "0.24", default-features = false, features = ["jpeg", "gif", "jpeg_rayon", "png", "webp"] }
+rand = { version = "0.8", default-features = false, features = ["std", "std_rng", "getrandom"] }
+serde = { version = "1", features = ["derive"] }
+snafu = { version = "0.7", features = ["rust_1_61"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tracing = "0.1"
+uuid = { version = "1", features = ["v4", "serde"] }
