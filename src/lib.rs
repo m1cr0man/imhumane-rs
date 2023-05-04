@@ -1,2 +1,2 @@
-pub mod imhumane;
+pub mod service;
 pub mod http;

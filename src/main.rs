@@ -1,6 +1,6 @@
 #![feature(type_alias_impl_trait)]
 pub mod http;
-pub mod imhumane;
+pub mod service;
 
 use std::{
     net::{Ipv4Addr, SocketAddr},
@@ -12,7 +12,7 @@ use std::{
 use axum::Router;
 use tokio::runtime::Handle;
 
-use crate::imhumane::ImHumane;
+use crate::service::ImHumane;
 
 fn app(service: Arc<ImHumane>) -> Router {
     crate::http::get_router(service)

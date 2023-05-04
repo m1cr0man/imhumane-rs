@@ -4,7 +4,7 @@ use super::{
     constants::{HEADER_ID, HEADER_TOPIC},
     error::{Error, ParseUuidSnafu},
 };
-use crate::imhumane::ImHumane;
+use crate::service::ImHumane;
 use axum::{
     extract::{Json, Path},
     http::{header, StatusCode},
