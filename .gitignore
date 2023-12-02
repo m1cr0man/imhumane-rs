@@ -12,3 +12,7 @@ Cargo.lock
 # imhumane specific
 hidden/
 images/
+
+# VSCode/direnv
+.direnv
+.dev

@@ -5,11 +5,23 @@
 		}
 	],
 	"settings": {
-		"nixEnvSelector.nixFile": "${workspaceRoot}/shell.nix",
 		"editor.formatOnSave": true,
 		"files.insertFinalNewline": true,
 		"files.trimFinalNewlines": true,
-		"files.trimTrailingWhitespace": true
+		"files.trimTrailingWhitespace": true,
+		"[rust]": {
+			"editor.codeActionsOnSave": {
+				"source.organizeImports": true
+			}
+		},
+		"nix.serverPath": "./.dev/rnix-lsp/bin/rnix-lsp",
+		"nix.formatterPath": "./.dev/nixpkgs-fmt/bin/nixpkgs-fmt",
+		"rust-analyzer.cargo.sysroot": "${workspaceFolder}/.dev/rust",
+		"rust-analyzer.server.path": "${workspaceFolder}/.dev/rust/bin/rust-analyzer",
+		"rust-analyzer.runnables.command": "${workspaceFolder}/.dev/rust/bin/cargo",
+		"rust-analyzer.cargo.extraEnv": {
+			"PATH": "${workspaceFolder}/.dev/rust/bin:${workspaceFolder}/.dev/gcc/bin:${workspaceFolder}/.dev/pkg-config/bin",
+		},
 	},
 	"launch": {
 		"version": "0.2.0",
