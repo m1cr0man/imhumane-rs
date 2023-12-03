@@ -1,15 +1,11 @@
-#![feature(type_alias_impl_trait)]
+mod config;
 pub mod http;
 pub mod service;
 
-use std::{
-    net::{Ipv4Addr, SocketAddr},
-    path::Path,
-    sync::Arc,
-    thread,
-};
+use std::{sync::Arc, thread};
 
 use axum::Router;
+use clap::Parser;
 use tokio::runtime::Handle;
 
 use crate::service::ImHumane;
@@ -20,11 +16,17 @@ fn app(service: Arc<ImHumane>) -> Router {
 
 #[tokio::main]
 async fn main() {
-    let addr = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 3000));
-    tracing::info!("Listening on {}", addr);
+    let cli = crate::config::ImHumaneCli::parse();
 
-    let service = Arc::new(ImHumane::new(8));
-    service.scan_for_collections(Path::new("images")).unwrap();
+    if cli.buffer_size < 1 {
+        panic!("Buffer size must be >= 1");
+    }
+    if cli.threads < 1 {
+        panic!("Threads must be >= 1");
+    }
+
+    let service = Arc::new(ImHumane::new(cli.buffer_size));
+    service.scan_for_collections(&cli.images_directory).unwrap();
 
     // Start threads for the challenge generators
     let handle = Handle::try_current().expect("Failed to get handle for current tokio runtime");
@@ -36,6 +38,8 @@ async fn main() {
     }
 
     // Start the web server
+    let addr = cli.address;
+    tracing::info!("Listening on {}", addr);
     axum::Server::bind(&addr)
         .serve(app(service).into_make_service())
         .await
