@@ -6,14 +6,31 @@ license = "Apache-2.0"
 
 [dependencies]
 axum = "0.6"
-clap = { version = "4", features = ["derive", "env"] }
-deadqueue = { version = "0.2", default-features = false, features = ["resizable"] }
+clap = { version = "4", features = ["derive", "env"], optional = true }
+deadqueue = { version = "0.2", default-features = false, features = [
+    "resizable",
+] }
+figment = { version = "0.10" }
 fs2 = "0.4"
-image = { version = "0.24", default-features = false, features = ["jpeg", "gif", "jpeg_rayon", "png", "webp"] }
-rand = { version = "0.8", default-features = false, features = ["std", "std_rng", "getrandom"] }
+image = { version = "0.24", default-features = false, features = [
+    "jpeg",
+    "gif",
+    "jpeg_rayon",
+    "png",
+    "webp",
+] }
+rand = { version = "0.8", default-features = false, features = [
+    "std",
+    "std_rng",
+    "getrandom",
+] }
 serde = { version = "1", features = ["derive"] }
-serde_yaml = "^0.9"
 snafu = { version = "0.7", features = ["rust_1_61"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1"
 uuid = { version = "1", features = ["v4", "serde"] }
+
+[features]
+default = ["env"]
+cli = ["clap"]
+env = ["figment/env"]

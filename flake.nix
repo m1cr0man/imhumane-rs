@@ -89,6 +89,7 @@
         # artifacts from above.
         imhumane-rs = craneLibBuild.buildPackage (commonArgs // {
           inherit cargoArtifacts;
+          cargoExtraArgs = "--locked -F cli";
         });
       in
       {
