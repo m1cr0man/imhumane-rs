@@ -5,4 +5,5 @@ pub mod error;
 mod locked_file;
 pub mod service;
 
+pub use config::Config;
 pub use service::ImHumane;
