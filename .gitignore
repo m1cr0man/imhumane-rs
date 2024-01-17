@@ -16,3 +16,11 @@ images/
 # VSCode/direnv
 .direnv
 .dev
+
+# Config file
+config*.json
+!config.example.json
+
+# Nix
+result
+result/

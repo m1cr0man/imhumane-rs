@@ -138,7 +138,11 @@
         };
 
         packages = {
+          inherit imhumane-rs;
           default = imhumane-rs;
+          imhumane-rs-lib = craneLibBuild.buildPackage (commonArgs // {
+            inherit cargoArtifacts;
+          });
           imhumane-rs-llvm-coverage = craneLibDev.cargoLlvmCov (commonArgs // {
             inherit cargoArtifacts;
           });
