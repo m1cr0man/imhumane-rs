@@ -1,6 +1,7 @@
 // Requires IMHUMANE_API_URL to be defined earlier
-// TODO serve via API
-// TODO validate button + set valid token
+
+const RESPONSIVE = (typeof IMHUMANE_RESPONSIVE != 'undefined' && IMHUMANE_RESPONSIVE) || (document.currentScript && document.currentScript.dataset.responsive != undefined) || false;
+
 class Challenge {
     constructor(
         headers,
@@ -12,6 +13,8 @@ class Challenge {
         this.imageSize = +headers.get("X-Imhumane-Image-Size");
         this.gridLength = +headers.get("X-Imhumane-Grid-Length");
         this.containerLength = this.gapSize + ((this.gapSize + this.imageSize) * this.gridLength);
+
+        this.gapPercentage = (((this.gapSize * (this.gridLength + 1)) / this.containerLength) / 4) * 100;
 
         this.imageUrl = `url("${base64Image}")`;
 
@@ -28,15 +31,27 @@ class Challenge {
 
     get cssStyle() {
         return `
-            .${this.cssClass} > div {
-                background-image: ${this.imageUrl};
-                display: grid;
-                grid-template-columns: repeat(${this.gridLength}, ${this.imageSize}px);
-                grid-template-rows: repeat(${this.gridLength}, ${this.imageSize}px);
+            .${this.cssClass}.imhumane-responsive > div {
+                width: 100%;
+                gap: ${this.gapPercentage}%;
+                padding: ${this.gapPercentage}%;
+            }
+
+            .${this.cssClass}:not(.imhumane-responsive) > div {
+                width: ${this.containerLength}px;
+                /* Percentage gaps are based on the parent element's width.
+                   To avoid weird rendering, use px when not responsive.    */
                 gap: ${this.gapSize}px;
                 padding: ${this.gapSize}px;
-                height: ${this.containerLength}px;
-                width: ${this.containerLength}px;
+            }
+
+            .${this.cssClass} > div {
+                background-size: contain;
+                background-image: ${this.imageUrl};
+                display: grid;
+                grid-template-columns: repeat(${this.gridLength}, 1fr);
+                grid-template-rows: repeat(${this.gridLength}, 1fr);
+                aspect-ratio: 1;
                 box-sizing: border-box;
             }
 
@@ -71,13 +86,11 @@ class Challenge {
 
     getImageContainerElement() {
         const selector = document.createElement("div");
-        selector.classList.add("imhumane-image");
         return selector;
     }
 
     getAnswerElement() {
         const answer = document.createElement("input");
-        topic.classList.add("imhumane-answer");
         answer.type = "hidden";
         answer.name = "imhumane-answer";
         return answer
@@ -85,7 +98,6 @@ class Challenge {
 
     getTopicElement() {
         const topic = document.createElement("p");
-        topic.classList.add("imhumane-topic");
         topic.innerHTML = `Select all images containing <b>${this.topic}</b>:`;
         return topic
     }
