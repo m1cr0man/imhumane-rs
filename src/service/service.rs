@@ -18,8 +18,6 @@ use super::{challenge::Challenge, collection::Collection, error::*, locked_file:
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
-const GAP_PX: u32 = 8;
-const IMG_SIZE_PX: u32 = 96;
 const THUMBNAIL_PREFIX: &str = &".thumbnail.";
 
 #[derive(Debug)]
@@ -27,8 +25,11 @@ pub struct ImHumane {
     queue: deadqueue::resizable::Queue<Challenge>,
     thumbnail_queue: deadqueue::unlimited::Queue<PathBuf>,
     collections: RwLock<Vec<Collection>>,
-    answers: Mutex<HashMap<String, u32>>,
+    answers: Mutex<HashMap<String, String>>,
     validated_tokens: Mutex<HashSet<String>>,
+    image_size: u32,
+    gap_size: u32,
+    grid_length: u32,
 }
 
 fn get_thumbnail_path(img_path: &PathBuf) -> PathBuf {
@@ -40,13 +41,16 @@ fn get_thumbnail_path(img_path: &PathBuf) -> PathBuf {
 }
 
 impl ImHumane {
-    pub fn new(buffer_size: usize) -> Self {
+    pub fn new(buffer_size: usize, image_size: u32, gap_size: u32, grid_length: u32) -> Self {
         Self {
             queue: deadqueue::resizable::Queue::new(buffer_size),
             thumbnail_queue: deadqueue::unlimited::Queue::new(),
             collections: RwLock::new(Vec::new()),
             answers: Mutex::new(HashMap::new()),
             validated_tokens: Mutex::new(HashSet::new()),
+            image_size,
+            gap_size,
+            grid_length,
         }
     }
 
@@ -62,7 +66,7 @@ impl ImHumane {
         self.queue.pop().await
     }
 
-    pub fn check_answer(&self, challenge_id: String, answer: u32) -> bool {
+    pub fn check_answer(&self, challenge_id: String, answer: String) -> bool {
         if let Some(correct_answer) = self.answers.lock().unwrap().remove(&challenge_id) {
             println!(
                 "Recived answer {} for {}. Expected {}",
@@ -141,7 +145,7 @@ impl ImHumane {
             let reader = BufReader::new(file);
             let fmt = ImageFormat::Jpeg;
             let img = image::load(reader, fmt).context(OpenImageSnafu::from(img_path))?;
-            if img.width() == IMG_SIZE_PX && img.height() == IMG_SIZE_PX {
+            if img.width() == self.image_size && img.height() == self.image_size {
                 println!("Reusing saved thumbnail for {}", thumb_path.display());
                 return Ok(img);
             }
@@ -153,7 +157,7 @@ impl ImHumane {
         file.set_len(0).context(thumb_err)?;
 
         let orig_img = image::open(img_path.clone()).context(OpenImageSnafu::from(img_path))?;
-        let orig_img = orig_img.resize(IMG_SIZE_PX, IMG_SIZE_PX, FilterType::Triangle);
+        let orig_img = orig_img.resize(self.image_size, self.image_size, FilterType::Triangle);
         orig_img
             .save_with_format(thumb_path, ImageFormat::Jpeg)
             .context(GenerateImageSnafu {})?;
@@ -163,9 +167,8 @@ impl ImHumane {
 
     fn generate_image(&self, images: Vec<&(&PathBuf, u32)>) -> Result<Vec<u8>> {
         // Assume a square grid
-        let grid_xy = f32::ceil(f32::sqrt(images.len() as f32)) as u32;
-        let img_area = IMG_SIZE_PX + GAP_PX;
-        let dimensions = (grid_xy * img_area) + GAP_PX;
+        let img_area = self.image_size + self.gap_size;
+        let dimensions = (self.grid_length * img_area) + self.gap_size;
         let mut imgbuf = RgbImage::new(dimensions, dimensions);
         imageops::vertical_gradient(&mut imgbuf, &Rgb([180, 180, 200]), &Rgb([220, 240, 220]));
 
@@ -176,8 +179,8 @@ impl ImHumane {
             imgbuf
                 .copy_from(
                     test_img.as_rgb8().unwrap(),
-                    GAP_PX + (img_area * (i % grid_xy)),
-                    GAP_PX + (img_area * (i / grid_xy)),
+                    self.gap_size + (img_area * (i % self.grid_length)),
+                    self.gap_size + (img_area * (i / self.grid_length)),
                 )
                 .context(GenerateImageSnafu {})?;
             i += 1;
@@ -227,23 +230,29 @@ impl ImHumane {
         }
 
         let question_images: Vec<_> = images
-            .choose_multiple_weighted(&mut rng, 9, |(_, v)| *v)
+            .choose_multiple_weighted(
+                &mut rng,
+                (self.grid_length * self.grid_length) as usize,
+                |(_, v)| *v,
+            )
             .unwrap()
             .collect();
 
-        let mut answer: u32 = 0x0;
-        let mut i = 0;
-        for (_, weight) in question_images.iter() {
+        let answer = String::from_iter(question_images.iter().map(|(_, weight)| {
             if *weight == num_collections as u32 {
-                answer |= 0x1 << i;
+                '1'
+            } else {
+                '0'
             }
-            i += 1;
-        }
+        }));
 
         Ok(Challenge {
             id: Uuid::new_v4().to_string(),
             image: self.generate_image(question_images)?,
             topic: correct.name.clone(),
+            image_size: self.image_size,
+            gap_size: self.gap_size,
+            grid_length: self.grid_length,
             answer,
         })
     }
@@ -310,5 +319,16 @@ impl ImHumane {
         existing_collections.append(&mut collections);
 
         Ok(())
+    }
+}
+
+impl From<&super::Config> for ImHumane {
+    fn from(config: &super::Config) -> Self {
+        Self::new(
+            config.buffer_size,
+            config.image_size,
+            config.gap_size,
+            config.grid_length,
+        )
     }
 }

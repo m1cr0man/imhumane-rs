@@ -15,6 +15,7 @@ fn app(service: Arc<ImHumane>) -> Router {
 #[derive(Parser)]
 #[command(author, version, about)]
 struct Args {
+    // TODO make optional
     /// Config file
     #[arg(short, long = "config", default_value = "config.json")]
     config_path: std::path::PathBuf,
@@ -43,7 +44,7 @@ pub(crate) async fn main() {
         panic!("Threads must be >= 1");
     }
 
-    let service = Arc::new(ImHumane::new(config.buffer_size));
+    let service = Arc::new(ImHumane::from(&config));
     service
         .scan_for_collections(&config.images_directory)
         .unwrap();

@@ -5,7 +5,10 @@ pub struct Challenge {
     pub id: String,
     pub image: Vec<u8>,
     pub topic: String,
-    pub answer: u32,
+    pub answer: String,
+    pub image_size: u32,
+    pub gap_size: u32,
+    pub grid_length: u32,
 }
 
 impl Display for Challenge {
