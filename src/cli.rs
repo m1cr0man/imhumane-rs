@@ -17,7 +17,12 @@ fn app(service: Arc<ImHumane>) -> Router {
 struct Args {
     // TODO make optional
     /// Config file
-    #[arg(short, long = "config", default_value = "config.json")]
+    #[arg(
+        short,
+        long = "config",
+        default_value = "config.json",
+        env = "IMHUMANE_CONFIG"
+    )]
     config_path: std::path::PathBuf,
 
     /// Rest of arguments

@@ -1,7 +1,4 @@
-use image::{
-    imageops::{self, FilterType},
-    DynamicImage, GenericImage, ImageFormat, Rgb, RgbImage,
-};
+use image::{imageops::FilterType, DynamicImage, GenericImage, ImageFormat, Rgba, RgbaImage};
 use rand::prelude::*;
 use snafu::prelude::*;
 use std::{
@@ -19,6 +16,7 @@ use super::{challenge::Challenge, collection::Collection, error::*, locked_file:
 type Result<T, E = Error> = std::result::Result<T, E>;
 
 const THUMBNAIL_PREFIX: &str = &".thumbnail.";
+const THUMBNAIL_FORMAT: ImageFormat = ImageFormat::WebP;
 
 #[derive(Debug)]
 pub struct ImHumane {
@@ -36,7 +34,7 @@ fn get_thumbnail_path(img_path: &PathBuf) -> PathBuf {
     // Fancy filename gen to avoid an unnecessary conversion to str
     let mut thumbnail = OsString::from(THUMBNAIL_PREFIX);
     thumbnail.push(img_path.file_stem().unwrap());
-    thumbnail.push(".jpg");
+    thumbnail.push(".webp");
     img_path.with_file_name(thumbnail)
 }
 
@@ -143,8 +141,8 @@ impl ImHumane {
         // Check if the written data is a valid thumbnail
         if file.metadata().context(thumb_err)?.len() > 0 {
             let reader = BufReader::new(file);
-            let fmt = ImageFormat::Jpeg;
-            let img = image::load(reader, fmt).context(OpenImageSnafu::from(img_path))?;
+            let img =
+                image::load(reader, THUMBNAIL_FORMAT).context(OpenImageSnafu::from(img_path))?;
             if img.width() == self.image_size && img.height() == self.image_size {
                 println!("Reusing saved thumbnail for {}", thumb_path.display());
                 return Ok(img);
@@ -159,7 +157,7 @@ impl ImHumane {
         let orig_img = image::open(img_path.clone()).context(OpenImageSnafu::from(img_path))?;
         let orig_img = orig_img.resize(self.image_size, self.image_size, FilterType::Triangle);
         orig_img
-            .save_with_format(thumb_path, ImageFormat::Jpeg)
+            .save_with_format(thumb_path, THUMBNAIL_FORMAT)
             .context(GenerateImageSnafu {})?;
 
         Ok(orig_img)
@@ -169,8 +167,7 @@ impl ImHumane {
         // Assume a square grid
         let img_area = self.image_size + self.gap_size;
         let dimensions = (self.grid_length * img_area) + self.gap_size;
-        let mut imgbuf = RgbImage::new(dimensions, dimensions);
-        imageops::vertical_gradient(&mut imgbuf, &Rgb([180, 180, 200]), &Rgb([220, 240, 220]));
+        let mut imgbuf = RgbaImage::from_pixel(dimensions, dimensions, Rgba([0u8, 0u8, 0u8, 0u8]));
 
         let mut i = 0;
         for img in images {
@@ -178,7 +175,7 @@ impl ImHumane {
             let test_img = self.get_thumbnail(&img.0)?;
             imgbuf
                 .copy_from(
-                    test_img.as_rgb8().unwrap(),
+                    &test_img.to_rgba8(),
                     self.gap_size + (img_area * (i % self.grid_length)),
                     self.gap_size + (img_area * (i / self.grid_length)),
                 )
@@ -191,7 +188,7 @@ impl ImHumane {
         let mut outbuf = Cursor::new(&mut data);
         println!("Generating image");
         imgbuf
-            .write_to(&mut outbuf, ImageFormat::Jpeg)
+            .write_to(&mut outbuf, ImageFormat::WebP)
             .context(GenerateImageSnafu {})?;
 
         Ok(data)

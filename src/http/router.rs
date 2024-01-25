@@ -28,10 +28,18 @@ pub async fn challenge_post(
 
     let answer = payload.answer;
 
-    match imhumane.check_answer(challenge_id.to_string(), answer) {
-        true => Ok(StatusCode::NO_CONTENT),
-        false => Ok(StatusCode::UNAUTHORIZED),
-    }
+    Ok((
+        (match imhumane.check_answer(challenge_id.to_string(), answer) {
+            true => StatusCode::NO_CONTENT,
+            false => StatusCode::UNAUTHORIZED,
+        }),
+        [
+            ("Access-Control-Allow-Origin", "*"),
+            ("Access-Control-Allow-Headers", "*"),
+            ("Access-Control-Expose-Headers", "*"),
+            ("Access-Control-Allow-Method", "*"),
+        ],
+    ))
 }
 
 pub async fn challenge_get(Extension(imhumane): Extension<Arc<ImHumane>>) -> impl IntoResponse {
@@ -40,7 +48,7 @@ pub async fn challenge_get(Extension(imhumane): Extension<Arc<ImHumane>>) -> imp
     (
         StatusCode::OK,
         [
-            (header::CONTENT_TYPE.as_str(), "image/jpeg".to_string()),
+            (header::CONTENT_TYPE.as_str(), "image/webp".to_string()),
             (HEADER_ID, challenge.id),
             (HEADER_TOPIC, challenge.topic),
             (HEADER_GAP_SIZE, challenge.gap_size.to_string()),
