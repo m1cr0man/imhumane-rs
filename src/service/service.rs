@@ -67,7 +67,7 @@ impl ImHumane {
     pub fn check_answer(&self, challenge_id: String, answer: String) -> bool {
         if let Some(correct_answer) = self.answers.lock().unwrap().remove(&challenge_id) {
             println!(
-                "Recived answer {} for {}. Expected {}",
+                "Received answer {} for {}. Expected {}",
                 answer, &challenge_id, correct_answer
             );
             if correct_answer == answer {
