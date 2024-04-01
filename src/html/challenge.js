@@ -1,4 +1,5 @@
 // Requires IMHUMANE_API_URL to be defined earlier
+const IMHUMANE_API_ROUTE = `${IMHUMANE_API_URL}/v1/challenge`;
 
 // From SO: https://stackoverflow.com/a/18650249
 // Handles prepending the MIME type too.
@@ -21,7 +22,7 @@ function asleep(delay) {
 }
 
 async function fetchChallenge() {
-    const response = await fetch(IMHUMANE_API_URL, {
+    const response = await fetch(IMHUMANE_API_ROUTE, {
         method: "GET",
     });
     const image = await blobToBase64(await response.blob());
@@ -47,7 +48,7 @@ class Challenge {
      */
     async validate(answer) {
         const body = JSON.stringify({ answer, challenge_id: this.challengeId });
-        const response = await fetch(IMHUMANE_API_URL, {
+        const response = await fetch(IMHUMANE_API_ROUTE, {
             method: "POST",
             body,
             headers: {
@@ -256,10 +257,12 @@ class ChallengeContainer {
 
         this.body = newElement("div", "imhumane-body");
 
-        this.tokenInput = newElement("input", "imhumane-token");
-        this.tokenInput.type = "hidden";
-        this.tokenInput.name = "imhumane_token";
-        this.tokenInput.required = true;
+        if (IMHUMANE_APPEND_QUERY !== true) {
+            this.tokenInput = newElement("input", "imhumane-token");
+            this.tokenInput.type = "hidden";
+            this.tokenInput.name = "imhumane_token";
+            this.tokenInput.required = true;
+        }
 
         this.doneSetup = false;
     }
@@ -267,6 +270,17 @@ class ChallengeContainer {
     setOverlayText(text) {
         this.overlay.hidden = false;
         this.overlay.innerText = text;
+    }
+
+    setToken(token) {
+        if (this.tokenInput) this.tokenInput.value = token;
+        else {
+            /** @type {HTMLFormElement} */
+            const form = this.root.closest("form");
+            const action = new URL(form.action);
+            action.searchParams.set("imhumane_token", token);
+            form.action = action.toString();
+        }
     }
 
     hideOverlay() {
@@ -279,7 +293,7 @@ class ChallengeContainer {
         document.head.appendChild(this.style);
         this.root.classList.add(this.cssClass);
         this.root.classList.remove("imhumane-success");
-        this.root.appendChild(this.tokenInput);
+        if (this.tokenInput) this.root.appendChild(this.tokenInput);
         this.root.appendChild(this.overlay);
         this.root.appendChild(this.body);
 
@@ -307,7 +321,7 @@ class ChallengeContainer {
                 if (result) {
                     this.setOverlayText("Success!");
                     this.root.classList.add("imhumane-success");
-                    this.tokenInput.value = challenge.challengeId;
+                    this.setToken(challenge.challengeId);
 
                     this.root.dispatchEvent(new CustomEvent("imhumane-success", {
                         detail: { token: challenge.challengeId }

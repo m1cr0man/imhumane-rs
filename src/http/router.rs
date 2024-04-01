@@ -3,12 +3,13 @@ use std::sync::Arc;
 use super::constants::{
     HEADER_GAP_SIZE, HEADER_GRID_LENGTH, HEADER_ID, HEADER_IMAGE_SIZE, HEADER_TOPIC,
 };
+use crate::html::CHALLENGE_JS;
 use crate::service::ImHumane;
 use axum::{
-    extract::{Json, Path},
+    extract::{Json, Path, Query},
     http::{header, StatusCode},
     response::IntoResponse,
-    routing::get,
+    routing::{get, post},
     Extension, Form, Router,
 };
 
@@ -20,7 +21,7 @@ pub struct ChallengePostPayload {
 
 #[derive(Debug, serde::Deserialize)]
 pub struct TokenPostPayload {
-    challenge_id: uuid::Uuid,
+    imhumane_token: uuid::Uuid,
 }
 
 pub async fn challenge_post(
@@ -79,11 +80,25 @@ pub async fn challenge_get(Extension(imhumane): Extension<Arc<ImHumane>>) -> imp
     )
 }
 
+pub async fn javascript_get() -> impl IntoResponse {
+    (
+        StatusCode::OK,
+        [
+            ("Content-Type", "text/javascript"),
+            ("Access-Control-Allow-Origin", "*"),
+            ("Access-Control-Allow-Headers", "*"),
+            ("Access-Control-Expose-Headers", "*"),
+            ("Access-Control-Allow-Method", "*"),
+        ],
+        CHALLENGE_JS,
+    )
+}
+
 pub async fn challenge_token_post_json(
     Extension(imhumane): Extension<Arc<ImHumane>>,
     Json(payload): Json<TokenPostPayload>,
 ) -> impl IntoResponse {
-    let challenge_id_str = payload.challenge_id.to_string();
+    let challenge_id_str = payload.imhumane_token.to_string();
     let result = imhumane.check_token(challenge_id_str.clone());
 
     tracing::info!(
@@ -104,7 +119,7 @@ pub async fn challenge_token_post_form(
     Extension(imhumane): Extension<Arc<ImHumane>>,
     Form(payload): Form<TokenPostPayload>,
 ) -> impl IntoResponse {
-    let challenge_id_str = payload.challenge_id.to_string();
+    let challenge_id_str = payload.imhumane_token.to_string();
     let result = imhumane.check_token(challenge_id_str.clone());
 
     tracing::info!(
@@ -112,6 +127,26 @@ pub async fn challenge_token_post_form(
         valid = result,
         method = "POST",
         content_type = "application/x-www-form-urlencoded",
+        "Validating token"
+    );
+
+    match result {
+        true => StatusCode::NO_CONTENT,
+        false => StatusCode::UNAUTHORIZED,
+    }
+}
+
+pub async fn challenge_token_get_query(
+    Extension(imhumane): Extension<Arc<ImHumane>>,
+    Query(payload): Query<TokenPostPayload>,
+) -> impl IntoResponse {
+    let challenge_id_str = payload.imhumane_token.to_string();
+    let result = imhumane.check_token(challenge_id_str.clone());
+
+    tracing::info!(
+        challenge_id = challenge_id_str,
+        valid = result,
+        method = "GET",
         "Validating token"
     );
 
@@ -159,13 +194,18 @@ pub fn get_router(service: Arc<ImHumane>) -> Router {
             "/v1/challenge",
             get(challenge_get).post(challenge_post).options(cors),
         )
+        .route("/v1/static/challenge.js", get(javascript_get).options(cors))
+        .route(
+            "/v1/tokens/validate",
+            get(challenge_token_get_query).options(cors),
+        )
         .route(
             "/v1/tokens/validate/json",
-            get(challenge_token_post_json).options(cors),
+            post(challenge_token_post_json).options(cors),
         )
         .route(
             "/v1/tokens/validate/form",
-            get(challenge_token_post_form).options(cors),
+            post(challenge_token_post_form).options(cors),
         )
         .route(
             "/v1/tokens/:challenge_id",

@@ -38,7 +38,15 @@
         inherit (pkgs) lib;
 
         craneLib = crane.mkLib pkgs;
-        src = craneLib.cleanCargoSource (craneLib.path ./.);
+
+        jsFilter = path: _type: builtins.match ".*js$" path != null;
+        jsOrCargo = path: type:
+          (jsFilter path type) || (craneLib.filterCargoSources path type);
+
+        src = lib.cleanSourceWith {
+          src = craneLib.path ./.; # The original, unfiltered source
+          filter = jsOrCargo;
+        };
 
         mkToolchain = fenix.packages.${system}.combine;
 
