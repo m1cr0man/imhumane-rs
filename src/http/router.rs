@@ -87,7 +87,13 @@ pub async fn cors() -> impl IntoResponse {
 
 pub fn get_router(service: Arc<ImHumane>) -> Router {
     Router::new()
-        .route("/", get(challenge_get).post(challenge_post).options(cors))
-        .route("/:challenge_id", get(challenge_token_get).options(cors))
+        .route(
+            "/v1/challenge",
+            get(challenge_get).post(challenge_post).options(cors),
+        )
+        .route(
+            "/v1/tokens/:challenge_id",
+            get(challenge_token_get).options(cors),
+        )
         .layer(Extension(service))
 }

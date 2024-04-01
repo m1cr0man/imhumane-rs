@@ -46,7 +46,7 @@ pub struct Config {
             long,
             // Sadly, clap_serde_derive defaults aren't used in clap's help output.
             // Emulate it via help text.
-            help = "Address to listen on [default: 0.0.0.0:3001]",
+            help = "Address to listen on. [default: 0.0.0.0:3001]",
             env = "IMHUMANE_ADDRESS",
         )
     )]
@@ -58,7 +58,7 @@ pub struct Config {
         arg(
             short,
             long,
-            help = "Number of images to pre-generate. Must be >= 1 [default: 8]",
+            help = "Number of images to pre-generate. Must be >= 1. [default: 8]",
             env = "IMHUMANE_BUFFER_SIZE"
         )
     )]
@@ -70,7 +70,7 @@ pub struct Config {
         arg(
             short,
             long,
-            help = "Number of image generation threads. Must be >= 1 [default: 8]",
+            help = "Number of image generation threads. Must be >= 1. [default: 8]",
             env = "IMHUMANE_THREADS"
         )
     )]
