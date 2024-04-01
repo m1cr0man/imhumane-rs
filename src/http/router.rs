@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
-use super::{
-    constants::{HEADER_GAP_SIZE, HEADER_GRID_LENGTH, HEADER_ID, HEADER_IMAGE_SIZE, HEADER_TOPIC},
-    error::{Error, ParseUuidSnafu},
+use super::constants::{
+    HEADER_GAP_SIZE, HEADER_GRID_LENGTH, HEADER_ID, HEADER_IMAGE_SIZE, HEADER_TOPIC,
 };
 use crate::service::ImHumane;
 use axum::{
@@ -10,26 +9,37 @@ use axum::{
     http::{header, StatusCode},
     response::IntoResponse,
     routing::get,
-    Extension, Router,
+    Extension, Form, Router,
 };
-use snafu::prelude::*;
 
-#[derive(serde::Deserialize)]
-pub struct PostPayload {
-    challenge_id: String,
+#[derive(Debug, serde::Deserialize)]
+pub struct ChallengePostPayload {
+    challenge_id: uuid::Uuid,
     answer: String,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct TokenPostPayload {
+    challenge_id: uuid::Uuid,
 }
 
 pub async fn challenge_post(
     Extension(imhumane): Extension<Arc<ImHumane>>,
-    Json(payload): Json<PostPayload>,
-) -> Result<impl IntoResponse, Error> {
-    let challenge_id = uuid::Uuid::try_parse(&payload.challenge_id).context(ParseUuidSnafu)?;
-
+    Json(payload): Json<ChallengePostPayload>,
+) -> impl IntoResponse {
+    let challenge_id_str = payload.challenge_id.to_string();
     let answer = payload.answer;
+    let result = imhumane.check_answer(challenge_id_str.clone(), answer.clone());
 
-    Ok((
-        (match imhumane.check_answer(challenge_id.to_string(), answer) {
+    tracing::info!(
+        challenge_id = challenge_id_str,
+        provided_answer = answer,
+        correct = result,
+        "Validating challenge"
+    );
+
+    (
+        (match result {
             true => StatusCode::NO_CONTENT,
             false => StatusCode::UNAUTHORIZED,
         }),
@@ -39,12 +49,18 @@ pub async fn challenge_post(
             ("Access-Control-Expose-Headers", "*"),
             ("Access-Control-Allow-Method", "*"),
         ],
-    ))
+    )
 }
 
 pub async fn challenge_get(Extension(imhumane): Extension<Arc<ImHumane>>) -> impl IntoResponse {
     let challenge = imhumane.get_challenge().await;
-    println!("Sending {} with answer {}", challenge.id, challenge.answer);
+
+    tracing::info!(
+        challenge_id = challenge.id,
+        answer = challenge.answer,
+        "Sending challenge"
+    );
+
     (
         StatusCode::OK,
         [
@@ -63,11 +79,63 @@ pub async fn challenge_get(Extension(imhumane): Extension<Arc<ImHumane>>) -> imp
     )
 }
 
+pub async fn challenge_token_post_json(
+    Extension(imhumane): Extension<Arc<ImHumane>>,
+    Json(payload): Json<TokenPostPayload>,
+) -> impl IntoResponse {
+    let challenge_id_str = payload.challenge_id.to_string();
+    let result = imhumane.check_token(challenge_id_str.clone());
+
+    tracing::info!(
+        challenge_id = challenge_id_str,
+        valid = result,
+        method = "POST",
+        content_type = "application/json",
+        "Validating token"
+    );
+
+    match result {
+        true => StatusCode::NO_CONTENT,
+        false => StatusCode::UNAUTHORIZED,
+    }
+}
+
+pub async fn challenge_token_post_form(
+    Extension(imhumane): Extension<Arc<ImHumane>>,
+    Form(payload): Form<TokenPostPayload>,
+) -> impl IntoResponse {
+    let challenge_id_str = payload.challenge_id.to_string();
+    let result = imhumane.check_token(challenge_id_str.clone());
+
+    tracing::info!(
+        challenge_id = challenge_id_str,
+        valid = result,
+        method = "POST",
+        content_type = "application/x-www-form-urlencoded",
+        "Validating token"
+    );
+
+    match result {
+        true => StatusCode::NO_CONTENT,
+        false => StatusCode::UNAUTHORIZED,
+    }
+}
+
 pub async fn challenge_token_get(
     Extension(imhumane): Extension<Arc<ImHumane>>,
     Path(challenge_id): Path<uuid::Uuid>,
 ) -> impl IntoResponse {
-    match imhumane.check_token(challenge_id.to_string()) {
+    let challenge_id_str = challenge_id.to_string();
+    let result = imhumane.check_token(challenge_id_str.clone());
+
+    tracing::info!(
+        challenge_id = challenge_id_str,
+        valid = result,
+        method = "GET",
+        "Validating token"
+    );
+
+    match result {
         true => StatusCode::NO_CONTENT,
         false => StatusCode::UNAUTHORIZED,
     }
@@ -90,6 +158,14 @@ pub fn get_router(service: Arc<ImHumane>) -> Router {
         .route(
             "/v1/challenge",
             get(challenge_get).post(challenge_post).options(cors),
+        )
+        .route(
+            "/v1/tokens/validate/json",
+            get(challenge_token_post_json).options(cors),
+        )
+        .route(
+            "/v1/tokens/validate/form",
+            get(challenge_token_post_form).options(cors),
         )
         .route(
             "/v1/tokens/:challenge_id",

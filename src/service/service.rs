@@ -66,9 +66,11 @@ impl ImHumane {
 
     pub fn check_answer(&self, challenge_id: String, answer: String) -> bool {
         if let Some(correct_answer) = self.answers.lock().unwrap().remove(&challenge_id) {
-            println!(
-                "Received answer {} for {}. Expected {}",
-                answer, &challenge_id, correct_answer
+            tracing::debug!(
+                answer = answer,
+                challenge_id = challenge_id,
+                correct_answer = correct_answer,
+                "Checking answer",
             );
             if correct_answer == answer {
                 self.validated_tokens.lock().unwrap().insert(challenge_id);
@@ -93,21 +95,23 @@ impl ImHumane {
                         .lock()
                         .unwrap()
                         .insert(challenge.id.clone(), challenge.answer.clone());
-                    println!(
-                        "Generated in {}ms. {}",
-                        start.elapsed().as_millis(),
-                        challenge
+                    tracing::debug!(
+                        time_ms = start.elapsed().as_millis(),
+                        challenge_id = challenge.id,
+                        challenge_topic = challenge.topic,
+                        challenge_answer = challenge.answer,
+                        "Challenge generated.",
                     );
 
                     // If queue would block, take a moment to generate a thumbnail
                     while self.queue.is_full() {
                         if let Some(img_path) = self.thumbnail_queue.try_pop() {
-                            println!(
+                            tracing::debug!(
                                 "Taking a moment to generate a thumbnail ({})",
                                 img_path.display()
                             );
                             match self.get_thumbnail(&img_path) {
-                                Err(err) => println!(
+                                Err(err) => tracing::error!(
                                     "Failed to generate thumbnail for {}: {:?}",
                                     img_path.display(),
                                     err
@@ -122,7 +126,7 @@ impl ImHumane {
                     handle.block_on(self.queue.push(challenge));
                 }
                 Err(err) => {
-                    println!("Failed to generate challenge: {:#}", err);
+                    tracing::error!("Failed to generate challenge: {:#}", err);
                     std::thread::sleep(Duration::from_secs(1));
                 }
             }
@@ -144,13 +148,13 @@ impl ImHumane {
             let img =
                 image::load(reader, THUMBNAIL_FORMAT).context(OpenImageSnafu::from(img_path))?;
             if img.width() == self.image_size && img.height() == self.image_size {
-                println!("Reusing saved thumbnail for {}", thumb_path.display());
+                tracing::trace!("Reusing saved thumbnail for {}", thumb_path.display());
                 return Ok(img);
             }
         }
 
         // Otherwise create a new one
-        println!("Generating thumbnail for {}", img_path.display());
+        tracing::debug!("Generating thumbnail for {}", img_path.display());
         file.seek(std::io::SeekFrom::Start(0)).context(thumb_err)?;
         file.set_len(0).context(thumb_err)?;
 
@@ -171,7 +175,7 @@ impl ImHumane {
 
         let mut i = 0;
         for img in images {
-            println!("Inserting {}", img.0.display());
+            tracing::trace!("Inserting {}", img.0.display());
             let test_img = self.get_thumbnail(&img.0)?;
             imgbuf
                 .copy_from(
@@ -186,7 +190,7 @@ impl ImHumane {
         let mut data = Vec::new();
 
         let mut outbuf = Cursor::new(&mut data);
-        println!("Generating image");
+        tracing::debug!("Generating image");
         imgbuf
             .write_to(&mut outbuf, ImageFormat::WebP)
             .context(GenerateImageSnafu {})?;
@@ -260,7 +264,7 @@ impl ImHumane {
         for entry in root.read_dir().context(ScanSnafu::from(root))? {
             let entry = entry.context(ScanSnafu::from(root))?;
             let path = entry.path();
-            println!("{}", path.display());
+            tracing::debug!("Found {}", path.display());
 
             let ftype = entry.file_type().context(ScanSnafu::from(path.as_path()))?;
 
@@ -282,11 +286,10 @@ impl ImHumane {
                         // Check if this image needs a thumbnail generated
                         let thumbnail = get_thumbnail_path(&img_path);
                         if !thumbnail.exists() {
-                            println!("{} added to thumbnail queue", img_path.display());
+                            tracing::debug!("{} added to thumbnail queue", img_path.display());
                             self.thumbnail_queue.push(img_path.clone());
                         }
 
-                        println!("{}", img_path.display());
                         images.push(img_path);
                     }
                 }

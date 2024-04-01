@@ -9,5 +9,4 @@ Visit the site to generate a question.
 
 ## TODO
 
-- Save generated thumbnail sized versions of source images.
 - Move from JSON to HTTP headers (bodyless) for validation.

@@ -1,16 +1,25 @@
 [package]
 name = "imhumane"
-version = "2.0.0"
+version = "2.1.0"
 edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-axum = "0.6"
-clap = { version = "4", features = ["derive", "env"], optional = true }
-clap-serde-derive = { version = "0.2", optional = true }
+axum = { version = "0.7", features = ["tracing"] }
+clap = { version = "4.5.3", optional = true, default-features = false, features = [
+    "cargo",
+    "error-context",
+    "help",
+    "std",
+    "usage",
+] }
+config = { version = "0.14", optional = true, default-features = false, features = [
+    "convert-case",
+] }
 deadqueue = { version = "0.2", default-features = false, features = [
     "resizable",
 ] }
+env_logger = { version = "0.11", optional = true }
 fs2 = "0.4"
 image = { version = "0.24", default-features = false, features = [
     "jpeg",
@@ -20,17 +29,31 @@ image = { version = "0.24", default-features = false, features = [
     "webp",
     "webp-encoder",
 ] }
+log = { version = "0.4", optional = true }
 rand = { version = "0.8", default-features = false, features = [
     "std",
     "std_rng",
     "getrandom",
 ] }
+pretty_env_logger = { version = "0.5", optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 snafu = { version = "0.7", features = ["rust_1_61"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tokio-listener = { version = "0.3.2", optional = true, features = [
+    "axum07",
+    "serde",
+] }
 tracing = "0.1"
 uuid = { version = "1", features = ["v4", "serde"] }
 
 [features]
-cli = ["clap", "clap-serde-derive"]
+cli = [
+    "clap",
+    "config",
+    "env_logger",
+    "log",
+    "pretty_env_logger",
+    "tracing/log",
+    "tokio-listener",
+]

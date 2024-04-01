@@ -18,8 +18,8 @@ images/
 .dev
 
 # Config file
-config*.json
-!config.example.json
+config*.env
+!config.example.env
 
 # Nix
 result
