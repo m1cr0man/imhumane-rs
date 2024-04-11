@@ -23,7 +23,32 @@
   };
 
   outputs = { self, nixpkgs, crane, fenix, flake-utils, advisory-db, ... }:
-    flake-utils.lib.eachDefaultSystem (system:
+    {
+      overlays = {
+        imhumane-rs-nixpkgs =
+          let
+            cargoConfig = (builtins.fromTOML (builtins.readFile "${self}/Cargo.toml"));
+            pname = cargoConfig.package.name;
+          in
+          final: prev: {
+            ${pname} = final.rustPlatform.buildRustPackage rec {
+              inherit pname;
+              version = cargoConfig.package.version;
+              src = self;
+
+              cargoHash = "sha256-W8/FL/CPvYu/9vF9c8WqFYcOI8eLvFHwsNG9v1qJOMQ=";
+
+              meta = with final.lib; {
+                description = "Anti bot form validator";
+                homepage = "https://github.com/m1cr0man/imhumane-rs";
+                license = licenses.asl20;
+                maintainers = [ maintainers.m1cr0man ];
+              };
+            };
+          };
+      };
+    } //
+    (flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {
           inherit system;
@@ -146,7 +171,7 @@
 
           overlay = (import nixpkgs {
             inherit system;
-            overlays = [ self.overlays.${system}.imhumane-rs-nixpkgs ];
+            overlays = [ self.overlays.imhumane-rs-nixpkgs ];
           }).imhumane;
         };
 
@@ -169,31 +194,6 @@
           drv = imhumane-rs;
         };
 
-        overlays = {
-          imhumane-rs-nixpkgs =
-            let
-              cargoConfig = (builtins.fromTOML (builtins.readFile "${self}/Cargo.toml"));
-              pname = cargoConfig.package.name;
-            in
-            final: prev: {
-              ${pname} = final.rustPlatform.buildRustPackage rec {
-                inherit pname;
-                version = cargoConfig.package.version;
-
-                src = self;
-
-                cargoHash = "sha256-W8/FL/CPvYu/9vF9c8WqFYcOI8eLvFHwsNG9v1qJOMQ=";
-
-                meta = with final.lib; {
-                  description = "Anti bot form validator";
-                  homepage = "https://github.com/m1cr0man/imhumane-rs";
-                  license = licenses.asl20;
-                  maintainers = [ maintainers.m1cr0man ];
-                };
-              };
-            };
-        };
-
         devShells.default = craneLibDev.devShell {
           # Inherit inputs from checks.
           checks = self.checks.${system};
@@ -207,6 +207,6 @@
             # pkgs.ripgrep
           ];
         };
-      }
+      })
     );
 }
