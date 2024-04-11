@@ -15,7 +15,7 @@
 			}
 		},
 		"nix.serverPath": "./.dev/rnix-lsp/bin/rnix-lsp",
-		"nix.formatterPath": "${workspaceFolder}/.dev/nixpkgs-fmt/bin/nixpkgs-fmt",
+		"nix.formatterPath": "./.dev/nixpkgs-fmt/bin/nixpkgs-fmt",
 		"rust-analyzer.cargo.sysroot": "${workspaceFolder}/.dev/rust",
 		"rust-analyzer.server.path": "${workspaceFolder}/.dev/rust/bin/rust-analyzer",
 		"rust-analyzer.runnables.command": "${workspaceFolder}/.dev/rust/bin/cargo",
