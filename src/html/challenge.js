@@ -141,6 +141,10 @@ class ChallengeGrid {
         root.appendChild(this.actions);
     }
 
+    hide() {
+        this.container.body.innerHTML = "";
+    }
+
     readAnswer() {
         return this.checkboxElements.reduce((prev, elem) =>
             prev + (elem.checked && "1" || "0")
@@ -175,19 +179,16 @@ class ChallengeContainer {
         this.cssStyle = `
             .${this.cssClass} {
                 position: relative;
+                min-height: 6em;
+                min-width: 12em;
+                z-index: 6;
                 display: inline-block;
                 background: rgb(180,180,200);
                 background: linear-gradient(180deg, rgba(180,180,200,1) 0%, rgba(220,240,220,1) 100%);
             }
 
-            .${this.cssClass}.imhumane-responsive div {
+            .${this.cssClass}.imhumane-responsive, .${this.cssClass}.imhumane-responsive div {
                 width: 100%;
-            }
-
-            .${this.cssClass}, .${this.cssClass} .imhumane-overlay {
-                min-height: 4em;
-                min-width: 8em;
-                z-index: 6;
             }
 
             .${this.cssClass} .imhumane-overlay {
@@ -196,10 +197,11 @@ class ChallengeContainer {
                 left: 0;
                 width: 100%;
                 height: 100%;
+                font-size: 2em;
+                z-index: 6;
                 opacity: 80%;
                 background-color: black;
                 color: white;
-                font-size: 2em;
                 text-align: center;
                 justify-content: center;
                 align-items: center;
@@ -322,6 +324,7 @@ class ChallengeContainer {
                     this.setOverlayText("Success!");
                     this.root.classList.add("imhumane-success");
                     this.setToken(challenge.challengeId);
+                    grid.hide();
 
                     this.root.dispatchEvent(new CustomEvent("imhumane-success", {
                         detail: { token: challenge.challengeId }
