@@ -1,4 +1,4 @@
 mod constants;
-mod router;
+pub mod router;
 
 pub use router::*;

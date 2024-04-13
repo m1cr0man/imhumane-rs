@@ -6,8 +6,9 @@ use super::constants::{
 use crate::html::CHALLENGE_JS;
 use crate::service::ImHumane;
 use axum::{
-    extract::{Json, Path, Query},
+    extract::{Json, Path, Query, Request},
     http::{header, StatusCode},
+    middleware::Next,
     response::IntoResponse,
     routing::{get, post},
     Extension, Form, Router,
@@ -186,6 +187,20 @@ pub async fn cors() -> impl IntoResponse {
             ("Access-Control-Allow-Method", "*"),
         ],
     )
+}
+
+pub async fn token_validate_middleware(
+    Extension(imhumane): Extension<Arc<ImHumane>>,
+    Query(payload): Query<TokenPostPayload>,
+    request: Request,
+    next: Next,
+) -> impl IntoResponse {
+    let challenge_id_str = payload.imhumane_token.to_string();
+    let result = imhumane.check_token(challenge_id_str.clone());
+    match result {
+        true => next.run(request).await,
+        false => StatusCode::UNAUTHORIZED.into_response(),
+    }
 }
 
 pub fn get_router(service: Arc<ImHumane>) -> Router {

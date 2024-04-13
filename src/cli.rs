@@ -1,7 +1,14 @@
+use std::net::IpAddr;
 use std::{env, error::Error, path::PathBuf, process::exit, sync::Arc, thread};
 
-use axum::Router;
+use axum::body::Bytes;
+use axum::extract::{Path, Request};
+use axum::http::{StatusCode, Uri};
+use axum::response::{IntoResponse, Response};
+use axum::{extract::State, routing::any};
+use axum::{middleware, Extension, Router};
 use std::io::Write;
+use tokio::net::TcpStream;
 use tokio::runtime::Handle;
 
 use crate::service::{config::Config, ImHumane};
@@ -13,6 +20,7 @@ struct AppConfig {
     listener_address: tokio_listener::ListenerAddress,
     images_directory: PathBuf,
     threads: usize,
+    protected_proxy_to: Option<String>,
 }
 
 fn parse_config<'a, T: serde::Deserialize<'a>>(prefix: &str) -> Result<T, Box<dyn Error>> {
@@ -30,8 +38,31 @@ fn parse_config<'a, T: serde::Deserialize<'a>>(prefix: &str) -> Result<T, Box<dy
     })
 }
 
-fn app(service: Arc<ImHumane>) -> Router {
-    crate::http::get_router(service)
+fn app(service: Arc<ImHumane>, backend: Option<String>) -> Router {
+    let router = crate::http::get_router(service);
+
+    if let Some(backend_url) = backend {
+        router.route(
+            "/proxy/*rest",
+            any(reverse_proxy_handler)
+                .with_state(backend_url.trim_end_matches("/").to_string())
+                .layer(middleware::from_fn(
+                    crate::http::router::token_validate_middleware,
+                )),
+        )
+    } else {
+        router
+    }
+}
+
+async fn reverse_proxy_handler(
+    State(backend): State<String>,
+    client_ip: IpAddr,
+    req: Request,
+) -> Response {
+    // TODO hyper_reverse_proxy uses a really old version of http crate.
+    // I can't just pass req to the reverse proxy as a result.
+    hyper_reverse_proxy::call(client_ip, &backend, req).await
 }
 
 fn setup_logger() {
@@ -118,7 +149,7 @@ pub(crate) async fn main() {
         threads.push(thread::spawn(move || svc.run_generator(handle)))
     }
 
-    let app = app(service);
+    let app = app(service, app_config.protected_proxy_to);
 
     // Start the web server
     let listener = tokio_listener::Listener::bind(

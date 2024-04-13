@@ -21,6 +21,7 @@ deadqueue = { version = "0.2", default-features = false, features = [
 ] }
 env_logger = { version = "0.11", optional = true }
 fs2 = "0.4"
+hyper-reverse-proxy = { version = "0.5.1", optional = true }
 image = { version = "0.24", default-features = false, features = [
     "jpeg",
     "gif",
@@ -52,6 +53,7 @@ cli = [
     "clap",
     "config",
     "env_logger",
+    "hyper-reverse-proxy",
     "log",
     "pretty_env_logger",
     "tracing/log",
