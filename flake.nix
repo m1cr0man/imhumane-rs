@@ -37,7 +37,7 @@
               src = self;
               buildFeatures = [ "cli" ];
 
-              cargoHash = "sha256-W8/FL/CPvYu/9vF9c8WqFYcOI8eLvFHwsNG9v1qJOMQ=";
+              cargoHash = "sha256-didN5SjfMLHGu7SP7KsMoWK5ALPKEleEGS/7FdG7cSU=";
 
               meta = with final.lib; {
                 description = "Anti bot form validator";

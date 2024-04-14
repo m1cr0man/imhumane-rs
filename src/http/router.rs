@@ -183,7 +183,7 @@ pub async fn cors() -> impl IntoResponse {
             ("Access-Control-Allow-Origin", "*"),
             ("Access-Control-Allow-Headers", "*"),
             ("Access-Control-Expose-Headers", "*"),
-            ("Access-Control-Allow-Method", "*"),
+            ("Access-Control-Allow-Methods", "GET, POST"),
         ],
     )
 }
