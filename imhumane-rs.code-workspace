@@ -11,7 +11,7 @@
 		"files.trimTrailingWhitespace": true,
 		"[rust]": {
 			"editor.codeActionsOnSave": {
-				"source.organizeImports": true
+				"source.organizeImports": "explicit"
 			}
 		},
 		"nix.serverPath": "./.dev/rnix-lsp/bin/rnix-lsp",

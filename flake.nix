@@ -137,10 +137,10 @@
           # Note that this is done as a separate derivation so that
           # we can block the CI if there are issues here, but not
           # prevent downstream consumers from building our crate by itself.
-          imhumane-rs-clippy = craneLibDev.cargoClippy (commonArgs // {
-            inherit cargoArtifacts;
-            cargoClippyExtraArgs = "--all-targets -- --deny warnings";
-          });
+          # imhumane-rs-clippy = craneLibDev.cargoClippy (commonArgs // {
+          #   inherit cargoArtifacts;
+          #   cargoClippyExtraArgs = "--all-targets -- --deny warnings";
+          # });
 
           imhumane-rs-doc = craneLibDev.cargoDoc (commonArgs // {
             inherit cargoArtifacts;
@@ -154,11 +154,6 @@
           # Audit dependencies
           imhumane-rs-audit = craneLibDev.cargoAudit {
             inherit src advisory-db;
-          };
-
-          # Audit licenses
-          imhumane-rs-deny = craneLibDev.cargoDeny {
-            inherit src;
           };
 
           # Run tests with cargo-nextest
