@@ -37,7 +37,7 @@
               src = self;
               buildFeatures = [ "cli" ];
 
-              cargoHash = "sha256-didN5SjfMLHGu7SP7KsMoWK5ALPKEleEGS/7FdG7cSU=";
+              cargoLock.lockFile = "${self}/Cargo.lock";
 
               meta = with final.lib; {
                 description = "Anti bot form validator";
@@ -184,6 +184,10 @@
             inherit (pkgs) nixpkgs-fmt rnix-lsp gcc pkg-config;
             rust = devToolchain;
           };
+          imhumane-rs-nixpkgs = (import nixpkgs {
+            inherit system;
+            overlays = [ self.overlays.imhumane-rs-nixpkgs ];
+          }).imhumane;
         };
 
         apps.default = flake-utils.lib.mkApp {
