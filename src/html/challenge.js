@@ -91,7 +91,7 @@ class ChallengeGrid {
 
         this.actions = newElement("span", "imhumane-actions");
         this.button = newElement("button", "imhumane-action-submit");
-        this.button.innerText = "Submit";
+        this.button.innerText = "Validate";
         this.button.type = "button";
         this.actions.appendChild(this.button);
 
