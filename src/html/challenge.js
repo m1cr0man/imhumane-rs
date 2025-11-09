@@ -216,16 +216,30 @@ class ChallengeContainer {
             }
 
             .${this.cssClass} .imhumane-checkbox {
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                appearance: none;
+                content: '';
+                display: block;
+                box-sizing: border-box;
                 cursor: pointer;
-                opacity: 75%;
+                opacity: 0%;
                 margin: 0;
                 padding: 0;
                 border: 0;
                 z-index: 3;
+                width: 100%;
+                height: 100%;
             }
 
-            .${this.cssClass} .imhumane-checkbox:not(:checked, :hover) {
-                appearance: none;
+            .${this.cssClass} .imhumane-checkbox:hover {
+                background-color: lightgray;
+                opacity: 75%;
+            }
+
+            .${this.cssClass} .imhumane-checkbox:checked {
+                background-color: darkolivegreen;
+                opacity: 75%;
             }
 
             .${this.cssClass} .imhumane-title {
