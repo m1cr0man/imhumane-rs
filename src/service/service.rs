@@ -206,11 +206,11 @@ impl ImHumane {
             return (InsufficientCollectionsSnafu {}).fail();
         }
 
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
 
-        let num_collections = rng.gen_range(2..=std::cmp::min(collections.len(), 5));
+        let num_collections = rng.random_range(2..=std::cmp::min(collections.len(), 5));
 
-        let mut sample = collections.choose_multiple(&mut rng, num_collections);
+        let mut sample = collections.sample(&mut rng, num_collections);
 
         // The first entry of the sample will be our "correct" collection
         let correct = sample.next().context(InsufficientCollectionsSnafu {})?;

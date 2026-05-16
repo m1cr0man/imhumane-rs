@@ -55,15 +55,17 @@
           inherit system;
         };
 
-        stdenv =
-          if pkgs.stdenv.isLinux then
-            pkgs.stdenvAdapters.useMoldLinker pkgs.stdenv
+        stdenv = p:
+          if p.stdenv.isLinux then
+            p.stdenvAdapters.useMoldLinker p.stdenv
           else
-            pkgs.stdenv;
+            p.stdenv;
 
         inherit (pkgs) lib;
 
-        craneLib = crane.mkLib pkgs;
+        craneLib = (crane.mkLib pkgs).overrideScope (final: prev: {
+          stdenvSelector = stdenv;
+        });
 
         jsFilter = path: _type: builtins.match ".*js$" path != null;
         jsOrCargo = path: type:
@@ -101,7 +103,7 @@
 
         # Common arguments can be set here to avoid repeating them later
         commonArgs = {
-          inherit src stdenv;
+          inherit src;
           strictDeps = true;
 
           buildInputs = [

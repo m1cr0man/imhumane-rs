@@ -5,7 +5,7 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-axum = { version = "0.7", features = ["tracing"] }
+axum = { version = "0.8", features = ["tracing"] }
 clap = { version = "4.5.3", optional = true, default-features = false, features = [
     "cargo",
     "error-context",
@@ -13,7 +13,7 @@ clap = { version = "4.5.3", optional = true, default-features = false, features 
     "std",
     "usage",
 ] }
-config = { version = "0.14", optional = true, default-features = false, features = [
+config = { version = "0.15", optional = true, default-features = false, features = [
     "convert-case",
 ] }
 deadqueue = { version = "0.2", default-features = false, features = [
@@ -21,27 +21,26 @@ deadqueue = { version = "0.2", default-features = false, features = [
 ] }
 env_logger = { version = "0.11", optional = true }
 fs2 = "0.4"
-image = { version = "0.24", default-features = false, features = [
+image = { version = "0.25", default-features = false, features = [
     "jpeg",
     "gif",
-    "jpeg_rayon",
+    "rayon",
     "png",
     "webp",
-    "webp-encoder",
 ] }
 log = { version = "0.4", optional = true }
-rand = { version = "0.8", default-features = false, features = [
+rand = { version = "0.10", default-features = false, features = [
     "std",
     "std_rng",
-    "getrandom",
+    "thread_rng",
 ] }
 pretty_env_logger = { version = "0.5", optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-snafu = { version = "0.7", features = ["rust_1_61"] }
+snafu = { version = "0.9", features = ["rust_1_81"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-tokio-listener = { version = "0.3.2", optional = true, features = [
-    "axum07",
+tokio-listener = { version = "0.5", optional = true, features = [
+    "axum08",
     "serde",
 ] }
 tracing = "0.1"

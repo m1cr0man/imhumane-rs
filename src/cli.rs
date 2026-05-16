@@ -19,7 +19,7 @@ fn parse_config<'a, T: serde::Deserialize<'a>>(prefix: &str) -> Result<T, Box<dy
     let cfg_source = config::Config::builder()
         .add_source(
             config::Environment::with_prefix(prefix)
-                .convert_case(config::Case::ScreamingSnake)
+                .convert_case(config::Case::Snake)
                 .try_parsing(true),
         )
         .build()?;
@@ -134,7 +134,7 @@ pub(crate) async fn main() {
     .unwrap();
 
     tracing::info!("Listening on {}", app_config.listener_address);
-    tokio_listener::axum07::serve(listener, app.into_make_service())
+    axum::serve(listener, app.into_make_service())
         .await
         .unwrap();
 

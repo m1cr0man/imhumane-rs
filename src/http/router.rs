@@ -208,7 +208,7 @@ pub fn get_router(service: Arc<ImHumane>) -> Router {
             post(challenge_token_post_form).options(cors),
         )
         .route(
-            "/v1/tokens/:challenge_id",
+            "/v1/tokens/{challenge_id}",
             get(challenge_token_get).options(cors),
         )
         .layer(Extension(service))
